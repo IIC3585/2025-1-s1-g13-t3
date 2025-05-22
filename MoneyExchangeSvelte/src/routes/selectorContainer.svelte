@@ -1,18 +1,17 @@
 <script lang="ts">
   export let entries: [string, string][] = [];
-  export let selected: string;
+  export let selected: string = '';
   export let amount: string = '';
-
-
 </script>
 
 <div class="selectorContainer">
   <select bind:value={selected}>
+    <option disabled selected value="">Select currency</option>
     {#each entries as [code, name]}
       <option value={code}>{code} - {name}</option>
     {/each}
   </select>
-  <input placeholder="Enter Amount" bind:value={amount} />
+  <input type="number" min="0" step="any" placeholder="Enter Amount" bind:value={amount} on:input />
 </div>
 
 <style>
