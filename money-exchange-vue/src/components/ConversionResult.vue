@@ -1,6 +1,6 @@
 <template>
-  <div class="conversion-result" v-if="store.result !== null">
-    <p>{{ store.amount }} {{ store.from }} = <strong>{{ store.result.toFixed(2) }}</strong> {{ store.to }}</p>
+  <div v-if="store.result !== null" class="conversion-result">
+    <p>{{ store.amount }} {{ store.from }} = <strong>{{ store.result.toFixed(2) }} {{ store.to }}</strong></p>
   </div>
 </template>
 
@@ -12,7 +12,8 @@ const store = useExchangeStore()
 
 <style scoped>
 .conversion-result {
-  font-size: 18px;
   margin-top: 20px;
+  font-size: 1.2em;
+  color: #333;
 }
 </style>

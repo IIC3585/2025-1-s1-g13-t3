@@ -4,9 +4,8 @@
     
     <CurrencySelector />
 
-    <!-- Botón para invertir monedas -->
     <div class="invert-container">
-      <button @click="store.invertir">🔁 Invertir</button>
+      <button @click="store.invertir(true)">Invertir</button>
     </div>
 
     <AmountInput />
@@ -31,7 +30,6 @@ const store = useExchangeStore()
   text-align: center;
 }
 
-/* Estilos para el botón invertir */
 .invert-container {
   margin: 10px 0;
 }

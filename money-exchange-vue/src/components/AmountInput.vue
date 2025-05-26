@@ -1,8 +1,18 @@
 <template>
   <div class="amount-input">
     <label>Monto:</label>
-    <input type="number" v-model.number="store.amount" min="0" />
-    <button @click="store.fetchRate">Convertir</button>
+    <input
+      type="number"
+      :value="store.amount"
+      @input="onAmountChange"
+      min="0"
+    />
+    <button
+      @click="store.fetchRate"
+      :disabled="!store.amount || store.amount <= 0"
+    >
+      Convertir
+    </button>
   </div>
 </template>
 
@@ -10,6 +20,11 @@
 import { useExchangeStore } from '../store/useExchangeStore'
 
 const store = useExchangeStore()
+
+function onAmountChange(event) {
+  const newAmount = Number(event.target.value)
+  store.setAmount(newAmount)
+}
 </script>
 
 <style scoped>
@@ -22,5 +37,9 @@ const store = useExchangeStore()
 input {
   width: 100px;
   padding: 5px;
+}
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 </style>
