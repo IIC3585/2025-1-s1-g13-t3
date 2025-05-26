@@ -31,16 +31,9 @@
           'x-rapidapi-host': 'currency-conversion-and-exchange-rates.p.rapidapi.com'
         }
       };
-      // const res = await fetch(url, options);
-      // const data: SymbolsResponse = await res.json();
-      const data: SymbolsResponse  = {
-      symbols: {
-        AED: 'United Arab Emirates Dirham',
-        AFN: 'Afghan Afghani',
-        ALL: 'Albanian Lek',
-        AMD: 'Armenian Dram'
-        }
-      }
+      const res = await fetch(url, options);
+      const data: SymbolsResponse = await res.json();
+
       symbols = data.symbols;
       entries = Object.entries(symbols);
     } catch (error) {
@@ -65,11 +58,11 @@
       };
 
     try {
-      // const response = await fetch(url, options);
-      // const rate: RateResponse = await response.json();
-      // const result = rate.result.toString();
+      const response = await fetch(url, options);
+      const rate: RateResponse = await response.json();
+      const result = rate.result.toString();
 
-      const result = '4.0';
+
 
       if (lastChanged === 'from') {
         amountTo = result;
