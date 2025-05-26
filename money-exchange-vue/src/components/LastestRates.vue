@@ -26,7 +26,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { useExchangeStore } from '../store/useExchangeStore'
 
 const store = useExchangeStore()
@@ -39,6 +39,12 @@ async function toggleRates() {
     await store.fetchLatestRates()
   }
 }
+
+watch(() => store.from, () => {
+  if (showRates.value) {
+    store.fetchLatestRates()
+  }
+})
 </script>
 
 <style scoped>
