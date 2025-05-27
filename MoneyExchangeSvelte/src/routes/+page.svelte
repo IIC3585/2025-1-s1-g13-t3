@@ -1,165 +1,211 @@
-<script lang="ts">
-  import CurrencySelector from './selectorContainer.svelte';
+<script>
   import { onMount } from 'svelte';
+  import CurrencySelector from '$lib/components/CurrencySelector.svelte';
+  import AmountInput from '$lib/components/AmountInput.svelte';
+  import { baseCurrency, targetCurrency, fetchRates, fetchCodes } from '$lib/stores.js';
 
-  const apiKey = import.meta.env.VITE_RAPIDAPI_KEY;
+  let history = [];
 
-  type SymbolsResponse = {
-    symbols: Record<string, string>;
-  };
-
-  type RateResponse = {
-    result: number;
-  };
-
-  let symbols: Record<string, string> = {};
-  let entries: [string, string][] = [];
-
-  let selectedFrom = '';
-  let selectedTo = '';
-  let amountFrom = '';
-  let amountTo = '';
-  let lastChanged: 'from' | 'to' = 'from';
-
-  onMount(async () => {
-    try {
-      const url = 'https://currency-conversion-and-exchange-rates.p.rapidapi.com/symbols'
-      const options = {
-        method: 'GET',
-        headers: {
-          'x-rapidapi-key': apiKey,
-          'x-rapidapi-host': 'currency-conversion-and-exchange-rates.p.rapidapi.com'
-        }
-      };
-      const res = await fetch(url, options);
-      const data: SymbolsResponse = await res.json();
-
-      symbols = data.symbols;
-      entries = Object.entries(symbols);
-    } catch (error) {
-      console.error('Failed to fetch symbols:', error);
+  onMount(() => {
+    fetchCodes();
+    const stored = localStorage.getItem('conversionHistory');
+    if (stored) {
+      try {
+        history = JSON.parse(stored);
+      } catch {}
     }
   });
 
-  async function handleSearch() {
-      const from = lastChanged === 'from' ? selectedFrom : selectedTo;
-      const to = lastChanged === 'from' ? selectedTo : selectedFrom;
-      const amount = Number(lastChanged === 'from' ? amountFrom : amountTo);
+  $: if ($baseCurrency) fetchRates($baseCurrency);
 
-      if (!from || !to || isNaN(amount)) return;
-
-      const url = `https://currency-conversion-and-exchange-rates.p.rapidapi.com/convert?from=${from}&to=${to}&amount=${amount}`;
-      const options = {
-        method: 'GET',
-        headers: {
-          'x-rapidapi-key': apiKey,
-          'x-rapidapi-host': 'currency-conversion-and-exchange-rates.p.rapidapi.com'
-        }
-      };
-
-    try {
-      const response = await fetch(url, options);
-      const rate: RateResponse = await response.json();
-      const result = rate.result.toString();
-
-
-
-      if (lastChanged === 'from') {
-        amountTo = result;
-      } else {
-        amountFrom = result;
-      }
-    } catch (error) {
-      console.error('Error during conversion:', error);
-    }
+  function saveConversion() {
+    if (!$baseCurrency || !$targetCurrency) return;
+    const pair = { base: $baseCurrency, target: $targetCurrency };
+    history = history.filter(
+      (item) => !(item.base === pair.base && item.target === pair.target)
+    );
+    history.unshift(pair);
+    if (history.length > 10) history = history.slice(0, 10);
+    localStorage.setItem('conversionHistory', JSON.stringify(history));
   }
 
-  
+  function selectHistory(item) {
+    baseCurrency.set(item.base);
+    targetCurrency.set(item.target);
+  }
 
+  // Helper para obtener emoji de bandera de ISO país
+  function countryToFlag(countryCode) {
+    return countryCode
+      .toUpperCase()
+      .replace(/./g, (char) =>
+        String.fromCodePoint(127397 + char.charCodeAt())
+      );
+  }
 
+  function getFlag(currency) {
+    if (!currency) return '';
+    const mapping = { EUR: 'EU' };
+    const country = mapping[currency] || currency.slice(0, 2);
+    return countryToFlag(country);
+  }
 </script>
 
+<main class="container">
+  <header class="header">
+    <h1>Money Exchange</h1>
+  </header>
 
-<div class="mainContainer">
-  <div class="titleText">Money Exchange</div>
+  <div class="converter">
+    <CurrencySelector isBase={true} />
+    <div class="flag">{getFlag($baseCurrency)}</div>
+    <CurrencySelector isBase={false} />
+    <div class="flag">{getFlag($targetCurrency)}</div>
 
-  {#if entries.length > 0}
-    <div class="allSelectorContainer">
-      <div class="SelectorsContainer">
-        <CurrencySelector
-          {entries}
-          bind:selected={selectedFrom}
-          bind:amount={amountFrom}
-          on:input={() => lastChanged = 'from'}
-        />
-        <CurrencySelector
-          {entries}
-          bind:selected={selectedTo}
-          bind:amount={amountTo}
-          on:input={() => lastChanged = 'to'}
-        />
-      </div>
-      <button class="searchButton" on:click={handleSearch}>Search</button>
+    <AmountInput isBase={true} />
+    <div class="arrow">⇄</div>
+    <AmountInput isBase={false} />
+    <div></div>
+  </div>
+
+  <button class="save-button" on:click={saveConversion}>
+    Save
+  </button>
+
+  {#if history.length}
+    <div class="history">
+      <h2>History (last {history.length})</h2>
+      <ul>
+        {#each history as item}
+          <li on:click={() => selectHistory(item)}>
+            {item.base} → {item.target}
+          </li>
+        {/each}
+      </ul>
     </div>
-  {:else}
-    <p>Loading currencies...</p>
   {/if}
-</div>
+</main>
 
 <style>
-.mainContainer {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  height: 100vh;
-  background: linear-gradient(90deg, orangered 0%, orange 90%);
-  background-size: 200% 200%;
-  animation: animatedGradient 4s linear infinite;
-}
-
-@keyframes animatedGradient {
-  0% {
-    background-position: 0% 50%;
+  .container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    background-color: #d87d00;
+    margin: 0;
+    padding: 1rem;
   }
-  50% {
-    background-position: 100% 50%;
+
+  .header {
+    background-color: #c76c00;
+    width: 100%;
+    text-align: center;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    margin-bottom: 1.5rem;
   }
-}
 
-.titleText {
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  font-weight: 900;
-  color: white;
-  font-size: 80px;
-}
+  .header h1 {
+    margin: 0;
+    color: white;
+    font-size: 2.5rem;
+  }
 
-.allSelectorContainer {
-  display: flex;
-  flex-direction: row;
-}
+  .converter {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr auto;
+    grid-template-rows: auto auto;
+    gap: 0.75rem;
+    width: 100%;
+    max-width: 600px;
+    align-items: center;
+  }
 
-.SelectorsContainer {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-}
+  .flag {
+    text-align: center;
+    font-size: 1.5rem;
+  }
 
-.searchButton {
-  height: inherit;
-  background-color: orangered;
-  color: white;
-  padding: 0.5rem;
-  font-size: 1rem;
-  margin: 0.5rem;
-  border-radius: 5px;
-  border-width: 0px;
-}
+  .arrow {
+    font-size: 2.5rem;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
 
-.searchButton:hover {
-  background-color: yellow;
-  cursor: pointer;
-  color: orangered;
-}
+  .save-button {
+    margin-top: 1rem;
+    padding: 0.6rem 1.2rem;
+    font-size: 1.125rem;
+    border: 2px solid #fff;
+    border-radius: 0.5rem;
+    background: transparent;
+    color: white;
+    cursor: pointer;
+  }
+
+  .save-button:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+  }
+
+  .history {
+    margin-top: 1.5rem;
+    width: 100%;
+    max-width: 600px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 0.5rem;
+    padding: 1rem;
+    font-family: Arial, sans-serif;
+  }
+
+  .history h2 {
+    margin: 0 0 0.5rem;
+    color: white;
+    font-size: 1.25rem;
+  }
+
+  .history ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .history li {
+    padding: 0.5rem;
+    margin-bottom: 0.25rem;
+    background: white;
+    border-radius: 0.25rem;
+    cursor: pointer;
+    font-size: 1rem;
+  }
+
+  .history li:hover {
+    background: #f0f0f0;
+  }
+
+  :global(select),
+  :global(input) {
+    width: 100%;
+    padding: 0.3rem;
+    font-size: 0.8rem;
+    border-radius: 0.25rem;
+    border: 1px solid #ccc;
+  }
+
+  @media (max-width: 600px) {
+    .converter {
+      grid-template-columns: 1fr;
+      grid-template-rows: auto auto auto auto;
+    }
+    .arrow {
+      transform: rotate(90deg);
+    }
+    .save-button {
+      width: 100%;
+      text-align: center;
+    }
+  }
 </style>
